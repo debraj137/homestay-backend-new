@@ -1,128 +1,302 @@
-const sendEmail = require('../utils/emailService');
+const { sendEmail } = require('../utils/emailService');
 const Room = require('../model/room.model');
 const Booking = require('../model/booking.model');
 const User = require('../model/user.model');
-async function createBooking(req, res) {
-  try {
-    // console.log('request in createBooking: ',req);
-    const { userId, roomId, checkInDate, checkOutDate, guestCount, totalPrice } = req.body;
-    // console.log('req in createBooking: ', req.body);
-    // const room = await Room.findById(roomId);
-    const room = await Room.findById(roomId).populate('ownerId');
-    const user = await User.findById(userId);
-    // console.log('room in createBooking: ',room);
-    if (!room) {
-      return res.status(404).json({ message: 'Room not found' });
-    }
+const fs = require('fs');
+const path = require('path');
+const templatePath = path.join(__dirname, '../emails/bookingConfirmationTemplate.html');
+let emailHtml = fs.readFileSync(templatePath, 'utf-8');
+// async function checkRoomAvailability(req, res) {
+//   const { roomId, checkInDate, checkOutDate, guestCount } = req.body;
+//   const room = await Room.findById(roomId).populate('ownerId');
+//   if (!room) {
+//     return res.status(404).json({ message: 'Room not found' });
+//   }
 
-    // ✅ Validate guest count
-    if (guestCount > room.maximumAllowedGuest) {
-      return res.status(400).json({
-        message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
-      });
-    }
+//   // ✅ Validate guest count
+//   if (guestCount > room.maximumAllowedGuest) {
+//     return res.status(400).json({
+//       message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
+//     });
+//   }
 
-    if (new Date(checkInDate).getTime() >= new Date(checkOutDate).getTime()) {
-      return res.status(400).json({
-        message: `Check-in date must be before check-out date`
-      });
-    }
 
-    // ✅ Check for overlapping bookings
-    // const overlapping = await Booking.find({
-    //   roomId,
-    //   checkInDate: { $lt: new Date(checkOutDate) },
-    //   checkOutDate: { $gt: new Date(checkInDate) }
-    // });
-    // if (overlapping.length > 0) {
-    //   return res.status(400).json({ message: 'Room is not available for selected dates' });
-    // }
+//   if (!checkInDate || !checkOutDate) {
+//     return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
+//   }
 
-    //New implementation to check for overlapping bookings
-    const latestBooking = await Booking.find({
-      roomId: roomId,
-      checkInDate: { $lt: checkOutDate },
-      checkOutDate: { $gt: checkInDate }
-    }).sort({ checkOutDate: -1 }).limit(1);
-    console.log('latestBooking: ', latestBooking);
-    if (latestBooking.length > 0) {
-      // const nextAvailable = new Date(latestBooking[0].checkOutDate);
-      // nextAvailable.setDate(nextAvailable.getDate() + 1); // day after last checkout  
-      // return res.status(400).json({
-      //   success: false,
-      //   message: `Room is not available from ${formatDate(latestBooking[0].checkInDate)} to ${formatDate(latestBooking[0].checkOutDate)}.`,
-      //   nextAvailableCheckIn: formatDate(nextAvailable)
-      // });
-      const today = new Date();
-      const bookedFrom = new Date(latestBooking[0].checkInDate);
-      const bookedTo = new Date(latestBooking[0].checkOutDate);
+//   if (new Date(checkInDate).getTime() >= new Date(checkOutDate).getTime()) {
+//     return res.status(400).json({
+//       message: `Check-in date must be before check-out date`
+//     });
+//   }
 
-      const nextAvailable = new Date(bookedTo);
-      nextAvailable.setDate(nextAvailable.getDate() + 1); // day after booking ends
+//   //New implementation to check for overlapping bookings
+//   const latestBooking = await Booking.find({
+//     roomId: roomId,
+//     checkInDate: { $lt: checkOutDate },
+//     checkOutDate: { $gt: checkInDate }
+//   }).sort({ checkOutDate: -1 }).limit(1);
+//   console.log('latestBooking: ', latestBooking);
+//   if (latestBooking.length > 0) {
+//     const today = new Date();
+//     const bookedFrom = new Date(latestBooking[0].checkInDate);
+//     const bookedTo = new Date(latestBooking[0].checkOutDate);
+
+//     const nextAvailable = new Date(bookedTo);
+//     nextAvailable.setDate(nextAvailable.getDate() + 1); // day after booking ends
+
+//     let availableBeforeBooking = null;
+
+//     if (today < bookedFrom) {
+//       const beforeBookingTo = new Date(bookedFrom); // clone
+//       beforeBookingTo.setDate(beforeBookingTo.getDate() - 1);
+
+//       // Only if from date is before to date
+//       if (today <= beforeBookingTo) {
+//         const adjustedBeforeBookingTo = new Date(beforeBookingTo);
+//         adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1);
+//         availableBeforeBooking = {
+//           from: formatDate(today),
+//           // to: formatDate(beforeBookingTo)
+//           to: formatDate(adjustedBeforeBookingTo)
+//         };
+//       }
+//     }
+//     const adjustedBookedFrom = new Date(bookedFrom);
+//     adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
+
+//     const adjustedBookedTo = new Date(bookedTo);
+//     adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
+//     nextAvailable.setDate(nextAvailable.getDate() - 1);
+
+//       return res.status(400).json({
+//         success: false,
+//         message: `Room is not available from ${formatDate(adjustedBookedFrom)} to ${formatDate(adjustedBookedTo)}.`,
+//         nextAvailableCheckIn: formatDate(nextAvailable),
+//         availableBeforeBooking
+//       });
+//   }
+
+
+
+
+//   // Utility
+//   function formatDate(date) {
+//     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+//   }
+
+//   // ✅ Room is available
+//   return res.status(200).json({
+//     success: true,
+//     message: 'Room is available for the selected dates.',
+//     roomDetails: {
+//       title: room.title,
+//       description: room.description,
+//       location: room.location,
+//       price: room.price,
+//       maximumAllowedGuest: room.maximumAllowedGuest,
+//       amenities: room.amenities,
+//       owner: {
+//         name: room.ownerId.name,
+//         email: room.ownerId.email,
+//         mobileNumber: room.ownerId.mobileNumber
+//       }
+//     }
+//   });
+// }
+
+
+async function checkRoomAvailability(req, res) {
+  console.log('checkRoomAvailability in req body: ', req.body)
+  const { roomId, checkInDate, checkOutDate, guestCount } = req.body;
+  const room = await Room.findById(roomId).populate('ownerId');
+  if (!room) {
+    return res.status(404).json({ message: 'Room not found' });
+  }
+
+  // ✅ Validate guest count
+  if (guestCount > room.maximumAllowedGuest) {
+    return res.status(400).json({
+      message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
+    });
+  }
+
+  if (!checkInDate || !checkOutDate) {
+    return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
+  }
+
+
+  const normalize = (date) => new Date(new Date(date).setHours(0, 0, 0, 0));
+  const normalizedCheckInDate = normalize(checkInDate);
+  const normalizedCheckOutDate = normalize(checkOutDate);
+
+  if (normalizedCheckInDate.getTime() >= normalizedCheckOutDate.getTime()) {
+    return res.status(400).json({
+      message: `Check-in date must be before check-out date`
+    });
+  }
+
+  //New implementation to check for overlapping bookings
+  const latestBooking = await Booking.find({
+    roomId: roomId,
+    checkInDate: { $lt: normalizedCheckOutDate },
+    checkOutDate: { $gt: normalizedCheckInDate }
+  }).sort({ checkOutDate: -1 }).limit(1);
+  console.log('latestBooking: ', latestBooking);
+  // if (latestBooking.length > 0) {
+  //   const today = normalize(new Date());
+  //   const bookedFrom = normalize(latestBooking[0].checkInDate);
+  //   const bookedTo = normalize(latestBooking[0].checkOutDate);
+
+  //   const nextAvailable = new Date(bookedTo);
+  //   nextAvailable.setDate(nextAvailable.getDate() + 1); // day after booking ends
+
+  //   let availableBeforeBooking = null;
+
+  //   if (today < bookedFrom) {
+  //     const beforeBookingTo = new Date(bookedFrom); // clone
+  //     beforeBookingTo.setDate(beforeBookingTo.getDate() - 1);
+
+  //     // Only if from date is before to date
+  //     if (today <= beforeBookingTo) {
+  //       const adjustedBeforeBookingTo = new Date(beforeBookingTo);
+  //       adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1);
+  //       availableBeforeBooking = {
+  //         from: formatDate(today),
+  //         // to: formatDate(beforeBookingTo)
+  //         to: formatDate(adjustedBeforeBookingTo)
+  //       };
+  //     }
+  //   }
+  //   const adjustedBookedFrom = new Date(bookedFrom);
+  //   adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
+
+  //   const adjustedBookedTo = new Date(bookedTo);
+  //   adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
+  //   nextAvailable.setDate(nextAvailable.getDate() - 1);
+  //   console.log('normalizedCheckInDate.getTime(): ', normalizedCheckInDate.getTime());
+  //   console.log('bookedTo.getTime(): ', bookedTo.getTime());
+  //   return res.status(400).json({
+  //     success: false,
+  //     message: `Room is not available from ${formatDate(adjustedBookedFrom)} to ${formatDate(adjustedBookedTo)}.`,
+  //     nextAvailableCheckIn: formatDate(nextAvailable),
+  //     availableBeforeBooking
+  //   });
+  // }
+
+  if (latestBooking.length > 0) {
+    const booking = latestBooking[0];
+    const bookingCheckIn = normalize(booking.checkInDate);
+    const bookingCheckOut = normalize(booking.checkOutDate);
+
+    // Check for real overlap
+    const isOverlapping =
+      normalizedCheckInDate < bookingCheckOut &&
+      normalizedCheckOutDate > bookingCheckIn;
+
+    if (isOverlapping) {
+      const today = normalize(new Date());
+
+      const adjustedBookedFrom = new Date(bookingCheckIn);
+      adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
+
+      const adjustedBookedTo = new Date(bookingCheckOut);
+      adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
+
+      const nextAvailable = new Date(bookingCheckOut);
 
       let availableBeforeBooking = null;
-
-      if (today < bookedFrom) {
-        const beforeBookingTo = new Date(bookedFrom); // clone
+      if (today < bookingCheckIn) {
+        const beforeBookingTo = new Date(bookingCheckIn);
         beforeBookingTo.setDate(beforeBookingTo.getDate() - 1);
 
-        // Only if from date is before to date
         if (today <= beforeBookingTo) {
           const adjustedBeforeBookingTo = new Date(beforeBookingTo);
           adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1);
+
           availableBeforeBooking = {
             from: formatDate(today),
-            // to: formatDate(beforeBookingTo)
-            to: formatDate(adjustedBeforeBookingTo)
+            to: formatDate(adjustedBeforeBookingTo),
           };
         }
       }
-      const adjustedBookedFrom = new Date(bookedFrom);
-      adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
 
-      const adjustedBookedTo = new Date(bookedTo);
-      adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
-      nextAvailable.setDate(nextAvailable.getDate() - 1);
+      nextAvailable.setDate(nextAvailable.getDate()); // no adjustment needed
+
       return res.status(400).json({
         success: false,
         message: `Room is not available from ${formatDate(adjustedBookedFrom)} to ${formatDate(adjustedBookedTo)}.`,
         nextAvailableCheckIn: formatDate(nextAvailable),
-        availableBeforeBooking
+        availableBeforeBooking,
       });
-
     }
+  }
 
-    // Utility
-    function formatDate(date) {
-      return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+
+  // Utility
+  function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  // ✅ Room is available
+  // console.log('normalizedCheckInDate.getTime(): ', normalizedCheckInDate.getTime());
+  // console.log('bookedTo.getTime(): ', bookedTo.getTime());
+  // if (normalizedCheckInDate.getTime() === bookedTo.getTime()) {
+  return res.status(200).json({
+    success: true,
+    message: 'Room is available for the selected dates.',
+    roomDetails: {
+      title: room.title,
+      description: room.description,
+      location: room.location,
+      price: room.price,
+      maximumAllowedGuest: room.maximumAllowedGuest,
+      amenities: room.amenities,
+      owner: {
+        name: room.ownerId.name,
+        email: room.ownerId.email,
+        mobileNumber: room.ownerId.mobileNumber
+      }
     }
+  });
+  // }
+}
 
 
 
+
+
+
+
+
+async function createBooking(req, res) {
+  try {
+    const { userId, roomId, checkInDate, checkOutDate, guestCount, totalPrice, mobileNumber } = req.body;
+    const room = await Room.findById(roomId).populate('ownerId');
+    const user = await User.findById(userId);
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     // ✅ Proceed to create booking if available
     const booking = new Booking({
+      userId,
       roomId,
       guestCount,
-      userId: req.user.userId,
       checkInDate,
       checkOutDate,
       totalPrice,
-      status: 'confirmed',      
-      userId,
-      mobileNumber: user.mobileNumber, // ✅ NEW,
+      status: 'confirmed',
+      mobileNumber
+      // mobileNumber: user.mobileNumber, // ✅ NEW,
     });
 
     await booking.save();
-    //   res.status(201).json({ message: 'Booking confirmed', booking });
-    // } catch (err) {
-    //   // console.error('err in booking: ',err);
-    //   res.status(500).json({ message: 'Booking failed' }); 
-    // }
-    // Fetch room and users
-    // const room = await Room.findById(roomId).populate('ownerId');
-    // const user = await User.findById(userId);
-
     const bookingDetails = `
       <h2>Booking Details</h2>
       <p><strong>Room:</strong> ${room.title}</p>
@@ -139,10 +313,23 @@ async function createBooking(req, res) {
       <p><strong>Email:</strong> ${user.email}</p>
       <p><strong>Mobile:</strong> ${user.mobileNumber}</p>
     `;
-
+    emailHtml = emailHtml
+      .replace('{{recipientName}}', user.name)
+      .replace('{{roomTitle}}', room.title)
+      .replace('{{roomLocation}}', room.location.city)
+      .replace('{{checkInDate}}', checkInDate)
+      .replace('{{checkOutDate}}', checkOutDate)
+      .replace('{{guestCount}}', guestCount)
+      .replace('{{totalPrice}}', totalPrice)
+      .replace('{{userName}}', user.name)
+      .replace('{{userEmail}}', user.email)
+    console.log('user.email: ', user.email);
+    console.log('room.ownerId.email: ', room.ownerId.email);
     // Send emails
     // await sendEmail(user.email, 'Booking Confirmation', bookingDetails + userDetails);
-    // await sendEmail(room.ownerId.email, 'New Booking for Your Room', userDetails + bookingDetails);
+    // await sendEmail(room.ownerId.email, 'New Booking for Your Room', userDetails + bookingDetails); 
+    await sendEmail(user.email, 'Booking Confirmation', emailHtml);
+    await sendEmail(room.ownerId.email, 'Booking Confirmation', emailHtml);
 
     res.status(201).json({ message: 'Booking created and emails sent', booking });
 
@@ -213,4 +400,4 @@ async function getOwnerRoomBooking(req, res) {
   }
 }
 
-module.exports = { createBooking, getUserBookings, getBookingsForRoom, getOwnerRoomBooking, getAllBooking }
+module.exports = { checkRoomAvailability, createBooking, getUserBookings, getBookingsForRoom, getOwnerRoomBooking, getAllBooking }
