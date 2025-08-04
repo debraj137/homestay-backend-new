@@ -273,6 +273,7 @@ async function checkRoomAvailability(req, res) {
 
 async function createBooking(req, res) {
   try {
+    console.log('req body in create booking: ',req.body)
     const { userId, roomId, checkInDate, checkOutDate, guestCount, totalPrice, mobileNumber } = req.body;
     const room = await Room.findById(roomId).populate('ownerId');
     const user = await User.findById(userId);
