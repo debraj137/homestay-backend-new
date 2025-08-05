@@ -213,7 +213,7 @@ async function checkRoomAvailability(req, res) {
 
         if (today <= beforeBookingTo) {
           const adjustedBeforeBookingTo = new Date(beforeBookingTo);
-          adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1);
+          adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1 -1);
 
           availableBeforeBooking = {
             from: formatDate(today),
