@@ -318,8 +318,8 @@ async function createBooking(req, res) {
       .replace('{{recipientName}}', user.name)
       .replace('{{roomTitle}}', room.title)
       .replace('{{roomLocation}}', room.location.city)
-      .replace('{{checkInDate}}', checkInDate)
-      .replace('{{checkOutDate}}', checkOutDate)
+      .replace('{{checkInDate}}', new Date(Number(checkInDate)).toDateString())
+      .replace('{{checkOutDate}}', new Date(Number(checkOutDate)).toDateString())
       .replace('{{guestCount}}', guestCount)
       .replace('{{totalPrice}}', totalPrice)
       .replace('{{userName}}', user.name)
@@ -327,8 +327,6 @@ async function createBooking(req, res) {
     console.log('user.email: ', user.email);
     console.log('room.ownerId.email: ', room.ownerId.email);
     // Send emails
-    // await sendEmail(user.email, 'Booking Confirmation', bookingDetails + userDetails);
-    // await sendEmail(room.ownerId.email, 'New Booking for Your Room', userDetails + bookingDetails); 
     await sendEmail(user.email, 'Booking Confirmation', emailHtml);
     await sendEmail(room.ownerId.email, 'Booking Confirmation', emailHtml);
 
