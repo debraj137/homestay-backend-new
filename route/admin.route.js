@@ -11,6 +11,7 @@ const adminOnly = (req, res, next) => {
 
 router.get('/pending-rooms', auth.verifyToken, adminOnly, adminController.getPendingRooms);
 router.patch('/approve-room/:id', auth.verifyToken, adminOnly, adminController.approveRoom);
+router.patch('/category/:id', auth.verifyToken, adminOnly, adminController.updateRoomCategoryByAdmin);
 router.get('/owners-with-rooms', auth.verifyToken, adminOnly, adminController.getOwnerListWithTheirRoomList);
 
 module.exports = router;

@@ -6,6 +6,9 @@ const auth = require('../middleware/auth'); // middleware to verify JWT
 router.post('/', auth.verifyToken, roomController.createRoom);
 router.put('/update', auth.verifyToken, roomController.updateRoom);
 router.get('/', roomController.getAllApprovedRooms);
+router.get('/gold', roomController.getGoldRoom),
+router.get('/silver', roomController.getSilverRoom),
+router.get('/diamond', roomController.getDiamondRoom),
 router.get('/owner', auth.verifyToken, roomController.getOwnerRooms);
 router.post('/search/city', roomController.getRoomsByCity);
 router.post('/getById', roomController.getRoomById);

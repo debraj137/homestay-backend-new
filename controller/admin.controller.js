@@ -47,4 +47,18 @@ async function getOwnerListWithTheirRoomList(req, res) {
   }
 }
 
-module.exports = { getPendingRooms, approveRoom, getOwnerListWithTheirRoomList } 
+async function updateRoomCategoryByAdmin(req, res) {
+    try {
+        const { category } = req.body;
+        const updatedRoom = await Room.findByIdAndUpdate(
+            req.params.id,
+            { category },
+            { new: true }
+        );
+        res.json({ message: 'Category updated', room: updatedRoom });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+}
+
+module.exports = { getPendingRooms, approveRoom, getOwnerListWithTheirRoomList, updateRoomCategoryByAdmin} 

@@ -23,14 +23,16 @@ mongoose.connect(process.env.DB_URL)
 
 
 
-// const Room = require('../homestay-backend/model/room.model')
+// const Room = require('../homestay-backend-copy/model/room.model')
 // async function backfillMaximumGuests() {
 //   const result = await Room.updateMany(
-//     { maximumAllowedGuest: { $exists: false } },
-//     { $set: { maximumAllowedGuest: 2 } }
+//     { category: { $exists: false } },
+//     { $set: { category: "Normal" } }
 //   );
 //   console.log(`Backfilled ${result.modifiedCount} room(s) with max guests`);
 // }
 
 // backfillMaximumGuests();
+
+
 

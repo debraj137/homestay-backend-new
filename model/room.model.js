@@ -17,6 +17,7 @@ const roomSchema = new mongoose.Schema({
   maximumAllowedGuest: {type: Number,required: true,min: 1},
   isApproved: { type: Boolean, default: false },
   isAvailable: { type: Boolean, default: true },
+  category: {type: String,  enum: ['Normal', 'Silver', 'Gold', 'Diamond'],  default: 'Normal'},
   createdAt: { type: Date, default: Date.now }
 });
 

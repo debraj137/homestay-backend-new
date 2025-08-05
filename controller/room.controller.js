@@ -113,7 +113,7 @@ async function filterRoom(req, res) {
     try {
         const { city, minPrice, maxPrice, amenities } = req.body;
 
-        const query = {isApproved: true};
+        const query = { isApproved: true };
 
         // Filter by city (optional)
         if (city && city.trim() !== '') {
@@ -209,9 +209,46 @@ async function getAmenities(req, res) {
     }
 }
 
+async function getGoldRoom(req, res) {
+    try {
+        const goldRooms = await Room.find({
+            isApproved: true,
+            category: 'Gold'
+        });
+        res.status(200).json(goldRooms);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error', error: err });
+    }
+}
+
+async function getSilverRoom(req, res) {
+    try {
+        const goldRooms = await Room.find({
+            isApproved: true,
+            category: 'Silver'
+        });
+        res.status(200).json(goldRooms);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error', error: err });
+    }
+}
+
+async function getDiamondRoom(req, res) {
+    try {
+        const goldRooms = await Room.find({
+            isApproved: true,
+            category: 'Diamond'
+        });
+        res.status(200).json(goldRooms);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error', error: err });
+    }
+}
+
 module.exports = {
     createRoom,
     getAllApprovedRooms,
     getOwnerRooms,
-    getRoomsByCity, getRoomById, updateRoom, filterRoom, getAmenities
+    getRoomsByCity, getRoomById, updateRoom, filterRoom, getAmenities,
+    getGoldRoom, getSilverRoom, getDiamondRoom
 }
