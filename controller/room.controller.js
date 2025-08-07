@@ -11,7 +11,9 @@ async function createRoom(req, res) {
             price,
             images,
             amenities,
-            maximumAllowedGuest
+            // maximumAllowedGuest
+            maximumAllowedAdult,
+            maximumAllowedChild
         } = req.body;
 
         const room = new Room({
@@ -21,7 +23,9 @@ async function createRoom(req, res) {
             price,
             images,
             amenities,
-            maximumAllowedGuest,
+            // maximumAllowedGuest,
+            maximumAllowedAdult,
+            maximumAllowedChild,
             ownerId: req.user.userId
         });
         await room.save();

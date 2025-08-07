@@ -6,120 +6,40 @@ const fs = require('fs');
 const path = require('path');
 const templatePath = path.join(__dirname, '../emails/bookingConfirmationTemplate.html');
 let emailHtml = fs.readFileSync(templatePath, 'utf-8');
-// async function checkRoomAvailability(req, res) {
-//   const { roomId, checkInDate, checkOutDate, guestCount } = req.body;
-//   const room = await Room.findById(roomId).populate('ownerId');
-//   if (!room) {
-//     return res.status(404).json({ message: 'Room not found' });
-//   }
 
-//   // ✅ Validate guest count
-//   if (guestCount > room.maximumAllowedGuest) {
-//     return res.status(400).json({
-//       message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
-//     });
-//   }
-
-
-//   if (!checkInDate || !checkOutDate) {
-//     return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
-//   }
-
-//   if (new Date(checkInDate).getTime() >= new Date(checkOutDate).getTime()) {
-//     return res.status(400).json({
-//       message: `Check-in date must be before check-out date`
-//     });
-//   }
-
-//   //New implementation to check for overlapping bookings
-//   const latestBooking = await Booking.find({
-//     roomId: roomId,
-//     checkInDate: { $lt: checkOutDate },
-//     checkOutDate: { $gt: checkInDate }
-//   }).sort({ checkOutDate: -1 }).limit(1);
-//   console.log('latestBooking: ', latestBooking);
-//   if (latestBooking.length > 0) {
-//     const today = new Date();
-//     const bookedFrom = new Date(latestBooking[0].checkInDate);
-//     const bookedTo = new Date(latestBooking[0].checkOutDate);
-
-//     const nextAvailable = new Date(bookedTo);
-//     nextAvailable.setDate(nextAvailable.getDate() + 1); // day after booking ends
-
-//     let availableBeforeBooking = null;
-
-//     if (today < bookedFrom) {
-//       const beforeBookingTo = new Date(bookedFrom); // clone
-//       beforeBookingTo.setDate(beforeBookingTo.getDate() - 1);
-
-//       // Only if from date is before to date
-//       if (today <= beforeBookingTo) {
-//         const adjustedBeforeBookingTo = new Date(beforeBookingTo);
-//         adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1);
-//         availableBeforeBooking = {
-//           from: formatDate(today),
-//           // to: formatDate(beforeBookingTo)
-//           to: formatDate(adjustedBeforeBookingTo)
-//         };
-//       }
-//     }
-//     const adjustedBookedFrom = new Date(bookedFrom);
-//     adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
-
-//     const adjustedBookedTo = new Date(bookedTo);
-//     adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
-//     nextAvailable.setDate(nextAvailable.getDate() - 1);
-
-//       return res.status(400).json({
-//         success: false,
-//         message: `Room is not available from ${formatDate(adjustedBookedFrom)} to ${formatDate(adjustedBookedTo)}.`,
-//         nextAvailableCheckIn: formatDate(nextAvailable),
-//         availableBeforeBooking
-//       });
-//   }
-
-
-
-
-//   // Utility
-//   function formatDate(date) {
-//     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-//   }
-
-//   // ✅ Room is available
-//   return res.status(200).json({
-//     success: true,
-//     message: 'Room is available for the selected dates.',
-//     roomDetails: {
-//       title: room.title,
-//       description: room.description,
-//       location: room.location,
-//       price: room.price,
-//       maximumAllowedGuest: room.maximumAllowedGuest,
-//       amenities: room.amenities,
-//       owner: {
-//         name: room.ownerId.name,
-//         email: room.ownerId.email,
-//         mobileNumber: room.ownerId.mobileNumber
-//       }
-//     }
-//   });
-// }
 
 
 async function checkRoomAvailability(req, res) {
   console.log('checkRoomAvailability in req body: ', req.body)
-  const { roomId, checkInDate, checkOutDate, guestCount } = req.body;
+  const { roomId, checkInDate, checkOutDate, numberOfAdults, numberOfChildren
+    // guestCount ,
+  } = req.body;
   const room = await Room.findById(roomId).populate('ownerId');
   if (!room) {
     return res.status(404).json({ message: 'Room not found' });
   }
 
   // ✅ Validate guest count
-  if (guestCount > room.maximumAllowedGuest) {
-    return res.status(400).json({
-      message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
-    });
+  // if (guestCount > room.maximumAllowedGuest) {
+  //   return res.status(400).json({
+  //     message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
+  //   });
+  // }
+
+  // Validation
+  if (numberOfAdults > room.maximumAllowedAdult) {
+    return res.status(400).json({ message: `Maximum allowed adults exceeded (max: ${room.maximumAllowedAdult})` });
+  }
+
+  if (numberOfChildren > room.maximumAllowedChild) {
+    return res.status(400).json({ message: `Maximum allowed children exceeded (max: ${room.maximumAllowedChild})` });
+  }
+
+  // Optional: validate total guests
+  const totalGuests = numberOfAdults + numberOfChildren;
+  const totalAllowed = room.maximumAllowedAdult + room.maximumAllowedChild;
+  if (totalGuests > totalAllowed) {
+    return res.status(400).json({ message: 'Total guest limit exceeded' });
   }
 
   if (!checkInDate || !checkOutDate) {
@@ -144,46 +64,7 @@ async function checkRoomAvailability(req, res) {
     checkOutDate: { $gt: normalizedCheckInDate }
   }).sort({ checkOutDate: -1 }).limit(1);
   console.log('latestBooking: ', latestBooking);
-  // if (latestBooking.length > 0) {
-  //   const today = normalize(new Date());
-  //   const bookedFrom = normalize(latestBooking[0].checkInDate);
-  //   const bookedTo = normalize(latestBooking[0].checkOutDate);
 
-  //   const nextAvailable = new Date(bookedTo);
-  //   nextAvailable.setDate(nextAvailable.getDate() + 1); // day after booking ends
-
-  //   let availableBeforeBooking = null;
-
-  //   if (today < bookedFrom) {
-  //     const beforeBookingTo = new Date(bookedFrom); // clone
-  //     beforeBookingTo.setDate(beforeBookingTo.getDate() - 1);
-
-  //     // Only if from date is before to date
-  //     if (today <= beforeBookingTo) {
-  //       const adjustedBeforeBookingTo = new Date(beforeBookingTo);
-  //       adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1);
-  //       availableBeforeBooking = {
-  //         from: formatDate(today),
-  //         // to: formatDate(beforeBookingTo)
-  //         to: formatDate(adjustedBeforeBookingTo)
-  //       };
-  //     }
-  //   }
-  //   const adjustedBookedFrom = new Date(bookedFrom);
-  //   adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
-
-  //   const adjustedBookedTo = new Date(bookedTo);
-  //   adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
-  //   nextAvailable.setDate(nextAvailable.getDate() - 1);
-  //   console.log('normalizedCheckInDate.getTime(): ', normalizedCheckInDate.getTime());
-  //   console.log('bookedTo.getTime(): ', bookedTo.getTime());
-  //   return res.status(400).json({
-  //     success: false,
-  //     message: `Room is not available from ${formatDate(adjustedBookedFrom)} to ${formatDate(adjustedBookedTo)}.`,
-  //     nextAvailableCheckIn: formatDate(nextAvailable),
-  //     availableBeforeBooking
-  //   });
-  // }
 
   if (latestBooking.length > 0) {
     const booking = latestBooking[0];
@@ -213,7 +94,7 @@ async function checkRoomAvailability(req, res) {
 
         if (today <= beforeBookingTo) {
           const adjustedBeforeBookingTo = new Date(beforeBookingTo);
-          adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1 -1);
+          adjustedBeforeBookingTo.setDate(adjustedBeforeBookingTo.getDate() + 1 - 1);
 
           availableBeforeBooking = {
             from: formatDate(today),
@@ -273,8 +154,11 @@ async function checkRoomAvailability(req, res) {
 
 async function createBooking(req, res) {
   try {
-    console.log('req body in create booking: ',req.body)
-    const { userId, roomId, checkInDate, checkOutDate, guestCount, totalPrice, mobileNumber } = req.body;
+    console.log('req body in create booking: ', req.body)
+    const { userId, roomId, checkInDate, checkOutDate, totalPrice, mobileNumber, numberOfAdults,
+      numberOfChildren,
+      // guestCount
+    } = req.body;
     const room = await Room.findById(roomId).populate('ownerId');
     const user = await User.findById(userId);
     if (!room) {
@@ -288,7 +172,9 @@ async function createBooking(req, res) {
     const booking = new Booking({
       userId,
       roomId,
-      guestCount,
+      // guestCount,
+      numberOfAdults,
+      numberOfChildren,
       checkInDate,
       checkOutDate,
       totalPrice,
@@ -298,29 +184,31 @@ async function createBooking(req, res) {
     });
 
     await booking.save();
-    const bookingDetails = `
-      <h2>Booking Details</h2>
-      <p><strong>Room:</strong> ${room.title}</p>
-      <p><strong>Location:</strong> ${room.location.city}</p>
-      <p><strong>Check-In:</strong> ${checkInDate}</p>
-      <p><strong>Check-Out:</strong> ${checkOutDate}</p>
-      <p><strong>Guest Count:</strong> ${guestCount}</p>
-      <p><strong>Total Price:</strong> ₹${totalPrice}</p>
-    `;
+    // const bookingDetails = `
+    //   <h2>Booking Details</h2>
+    //   <p><strong>Room:</strong> ${room.title}</p>
+    //   <p><strong>Location:</strong> ${room.location.city}</p>
+    //   <p><strong>Check-In:</strong> ${checkInDate}</p>
+    //   <p><strong>Check-Out:</strong> ${checkOutDate}</p>
+    //   <p><strong>Guest Count:</strong> ${guestCount}</p>
+    //   <p><strong>Total Price:</strong> ₹${totalPrice}</p>
+    // `;
 
-    const userDetails = `
-      <h2>User Details</h2>
-      <p><strong>Name:</strong> ${user.name}</p>
-      <p><strong>Email:</strong> ${user.email}</p>
-      <p><strong>Mobile:</strong> ${user.mobileNumber}</p>
-    `;
+    // const userDetails = `
+    //   <h2>User Details</h2>
+    //   <p><strong>Name:</strong> ${user.name}</p>
+    //   <p><strong>Email:</strong> ${user.email}</p>
+    //   <p><strong>Mobile:</strong> ${user.mobileNumber}</p>
+    // `;
     emailHtml = emailHtml
       .replace('{{recipientName}}', user.name)
       .replace('{{roomTitle}}', room.title)
       .replace('{{roomLocation}}', room.location.city)
       .replace('{{checkInDate}}', new Date(Number(checkInDate)).toDateString())
       .replace('{{checkOutDate}}', new Date(Number(checkOutDate)).toDateString())
-      .replace('{{guestCount}}', guestCount)
+      // .replace('{{guestCount}}', guestCount)
+      .replace('{{numberOfAdults}}', numberOfAdults)
+      .replace('{{numberOfChildren}}', numberOfChildren)
       .replace('{{totalPrice}}', totalPrice)
       .replace('{{userName}}', user.name)
       .replace('{{userEmail}}', user.email)
