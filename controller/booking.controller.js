@@ -11,20 +11,11 @@ let emailHtml = fs.readFileSync(templatePath, 'utf-8');
 
 async function checkRoomAvailability(req, res) {
   console.log('checkRoomAvailability in req body: ', req.body)
-  const { roomId, checkInDate, checkOutDate, numberOfAdults, numberOfChildren
-    // guestCount ,
-  } = req.body;
+  const { roomId, checkInDate, checkOutDate, numberOfAdults, numberOfChildren} = req.body;
   const room = await Room.findById(roomId).populate('ownerId');
   if (!room) {
     return res.status(404).json({ message: 'Room not found' });
   }
-
-  // ✅ Validate guest count
-  // if (guestCount > room.maximumAllowedGuest) {
-  //   return res.status(400).json({
-  //     message: `Guest count exceeds allowed limit. Max allowed: ${room.maximumAllowedGuest}`
-  //   });
-  // }
 
   // Validation
   if (numberOfAdults > room.maximumAllowedAdult) {
@@ -70,7 +61,8 @@ async function checkRoomAvailability(req, res) {
     const booking = latestBooking[0];
     const bookingCheckIn = normalize(booking.checkInDate);
     const bookingCheckOut = normalize(booking.checkOutDate);
-
+    console.log('bookingCheckIn',bookingCheckIn);
+    console.log('bookingCheckOut',bookingCheckOut);
     // Check for real overlap
     const isOverlapping =
       normalizedCheckInDate < bookingCheckOut &&
@@ -80,11 +72,11 @@ async function checkRoomAvailability(req, res) {
       const today = normalize(new Date());
 
       const adjustedBookedFrom = new Date(bookingCheckIn);
-      adjustedBookedFrom.setDate(adjustedBookedFrom.getDate() + 1);
-
+      adjustedBookedFrom.setDate(adjustedBookedFrom.getDate());
+      console.log('adjustedBookedFrom: ',adjustedBookedFrom);
       const adjustedBookedTo = new Date(bookingCheckOut);
-      adjustedBookedTo.setDate(adjustedBookedTo.getDate() - 1);
-
+      adjustedBookedTo.setDate(adjustedBookedTo.getDate());
+      console.log('adjustedBookedTo: ',adjustedBookedTo);
       const nextAvailable = new Date(bookingCheckOut);
 
       let availableBeforeBooking = null;
@@ -104,7 +96,8 @@ async function checkRoomAvailability(req, res) {
       }
 
       nextAvailable.setDate(nextAvailable.getDate()); // no adjustment needed
-
+      console.log('checkin date: ',formatDate(adjustedBookedFrom));
+      console.log('checkout date: ',formatDate(adjustedBookedTo));
       return res.status(400).json({
         success: false,
         message: `Room is not available from ${formatDate(adjustedBookedFrom)} to ${formatDate(adjustedBookedTo)}.`,
@@ -122,9 +115,6 @@ async function checkRoomAvailability(req, res) {
   }
 
   // ✅ Room is available
-  // console.log('normalizedCheckInDate.getTime(): ', normalizedCheckInDate.getTime());
-  // console.log('bookedTo.getTime(): ', bookedTo.getTime());
-  // if (normalizedCheckInDate.getTime() === bookedTo.getTime()) {
   return res.status(200).json({
     success: true,
     message: 'Room is available for the selected dates.',
@@ -142,7 +132,6 @@ async function checkRoomAvailability(req, res) {
       }
     }
   });
-  // }
 }
 
 
@@ -156,9 +145,7 @@ async function createBooking(req, res) {
   try {
     console.log('req body in create booking: ', req.body)
     const { userId, roomId, checkInDate, checkOutDate, totalPrice, mobileNumber, numberOfAdults,
-      numberOfChildren,
-      // guestCount
-    } = req.body;
+      numberOfChildren} = req.body;
     const room = await Room.findById(roomId).populate('ownerId');
     const user = await User.findById(userId);
     if (!room) {
@@ -184,22 +171,6 @@ async function createBooking(req, res) {
     });
 
     await booking.save();
-    // const bookingDetails = `
-    //   <h2>Booking Details</h2>
-    //   <p><strong>Room:</strong> ${room.title}</p>
-    //   <p><strong>Location:</strong> ${room.location.city}</p>
-    //   <p><strong>Check-In:</strong> ${checkInDate}</p>
-    //   <p><strong>Check-Out:</strong> ${checkOutDate}</p>
-    //   <p><strong>Guest Count:</strong> ${guestCount}</p>
-    //   <p><strong>Total Price:</strong> ₹${totalPrice}</p>
-    // `;
-
-    // const userDetails = `
-    //   <h2>User Details</h2>
-    //   <p><strong>Name:</strong> ${user.name}</p>
-    //   <p><strong>Email:</strong> ${user.email}</p>
-    //   <p><strong>Mobile:</strong> ${user.mobileNumber}</p>
-    // `;
     emailHtml = emailHtml
       .replace('{{recipientName}}', user.name)
       .replace('{{roomTitle}}', room.title)
@@ -227,7 +198,6 @@ async function createBooking(req, res) {
 };
 
 async function getUserBookings(req, res) {
-  // console.log('req in getUserBookings: ',req);
   try {
     const bookings = await Booking.find({ userId: req.user.userId }).populate('roomId');
     res.json(bookings);
