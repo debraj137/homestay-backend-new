@@ -92,6 +92,7 @@ async function login(req, res) {
     });
     res.json({ token, user });
   } catch (err) {
+    console.log('err in login: ',err)
     res.status(500).json({ message: 'Server error' });
   }
 };
